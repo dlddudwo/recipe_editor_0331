@@ -982,6 +982,11 @@ namespace AMI_Manager.Forms.Main
                 if (editingNode == null)
                     return;
 
+                if (new_key_value != null)
+                {
+                    new_key_value = new_key_value.Replace("\r", string.Empty).Replace("\n", string.Empty);
+                }
+
                 string select_node_path = string.Empty;
 
                 string result_path = Select_json_path(editingNode, Path_skip_mode.Skip);
@@ -1129,7 +1134,8 @@ namespace AMI_Manager.Forms.Main
         {
             if (e.KeyCode == Keys.F2 && treeViewJson.SelectedNode != null)
             {
-                string fullNodeText = GetFullNodeText(treeViewJson.SelectedNode);
+                TreeNode nodeToEdit = treeViewJson.SelectedNode;
+                string fullNodeText = GetFullNodeText(nodeToEdit);
                 if (fullNodeText.Contains(":"))
                 {
                     e.SuppressKeyPress = true;
@@ -1179,7 +1185,7 @@ namespace AMI_Manager.Forms.Main
 
                         if (editDialog.ShowDialog(this) == DialogResult.OK)
                         {
-                            ApplyNodeLabelEdit(treeViewJson.SelectedNode, editTextBox.Text);
+                            ApplyNodeLabelEdit(nodeToEdit, editTextBox.Text);
                         }
                     }
                 }
