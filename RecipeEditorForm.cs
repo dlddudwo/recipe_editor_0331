@@ -196,10 +196,7 @@ namespace AMI_Manager.Forms.Main
             {
                 if (File.Exists(json_path))
                 {
-                    string json = File.ReadAllText(json_path);
-                    jsonObject = JObject.Parse(json);
-
-                    string jsonText = System.IO.File.ReadAllText(json_path);
+                    string jsonText = File.ReadAllText(json_path);
                     jsonObject = JObject.Parse(jsonText);
                     richTextBox_json.Text = jsonText;
                     BeforeJsonText = jsonText;
@@ -1062,26 +1059,12 @@ namespace AMI_Manager.Forms.Main
                         }
                         else
                         {
-                            if (new_value.ToLower() == "true")
+                            if (bool.TryParse(new_value, out bool booleanParam))
                             {
-                                bool Boolean_param = true;
-
                                 if (select_token.Parent != null)
                                 {
                                     JProperty property = (JProperty)select_token.Parent;
-                                    property.Replace(new JProperty(new_key, Boolean_param));
-                                }
-                                treeViewJson.SelectedNode.ImageIndex = 4;
-                                treeViewJson.SelectedNode.SelectedImageIndex = 4;
-                            }
-                            else if (new_value.ToLower() == "false")
-                            {
-                                bool Boolean_param = false;
-
-                                if (select_token.Parent != null)
-                                {
-                                    JProperty property = (JProperty)select_token.Parent;
-                                    property.Replace(new JProperty(new_key, Boolean_param));
+                                    property.Replace(new JProperty(new_key, booleanParam));
                                 }
                                 treeViewJson.SelectedNode.ImageIndex = 4;
                                 treeViewJson.SelectedNode.SelectedImageIndex = 4;
