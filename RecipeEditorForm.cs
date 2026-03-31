@@ -972,14 +972,20 @@ namespace AMI_Manager.Forms.Main
         //===== Treeview 내용 수정 후 실제 Json파일 반영 =======//
         private void treeViewJson_AfterLabelEdit(object sender, NodeLabelEditEventArgs e)
         {
+            ApplyNodeLabelEdit(e?.Node ?? treeViewJson.SelectedNode, e?.Label);
+        }
+
+        private void ApplyNodeLabelEdit(TreeNode editingNode, string new_key_value)
+        {
             try
             {
+                if (editingNode == null)
+                    return;
+
                 string select_node_path = string.Empty;
 
-                string result_path = Select_json_path(treeViewJson.SelectedNode, Path_skip_mode.Skip);
+                string result_path = Select_json_path(editingNode, Path_skip_mode.Skip);
                 string key_value = string.Empty;
-
-                string new_key_value = e.Label;
 
                 if (new_key_value == null)
                 {
@@ -1044,8 +1050,8 @@ namespace AMI_Manager.Forms.Main
                         if (isNumeric)
                         {
                             //select_token.Replace(Convert.ToInt32(new_value));
-                            treeViewJson.SelectedNode.ImageIndex = 3;
-                            treeViewJson.SelectedNode.SelectedImageIndex = 3;
+                            editingNode.ImageIndex = 3;
+                            editingNode.SelectedImageIndex = 3;
 
                             if (select_token.Parent != null)
                             {
@@ -1066,8 +1072,8 @@ namespace AMI_Manager.Forms.Main
                                     JProperty property = (JProperty)select_token.Parent;
                                     property.Replace(new JProperty(new_key, booleanParam));
                                 }
-                                treeViewJson.SelectedNode.ImageIndex = 4;
-                                treeViewJson.SelectedNode.SelectedImageIndex = 4;
+                                editingNode.ImageIndex = 4;
+                                editingNode.SelectedImageIndex = 4;
                             }
                             else
                             {
@@ -1078,8 +1084,8 @@ namespace AMI_Manager.Forms.Main
                                     JProperty property = (JProperty)select_token.Parent;
                                     property.Replace(new JProperty(new_key, new_value));
                                 }
-                                treeViewJson.SelectedNode.ImageIndex = 5;
-                                treeViewJson.SelectedNode.SelectedImageIndex = 5;
+                                editingNode.ImageIndex = 5;
+                                editingNode.SelectedImageIndex = 5;
                             }
 
                         }
@@ -1097,10 +1103,10 @@ namespace AMI_Manager.Forms.Main
                     }
 
                 }
-                treeViewJson.SelectedNode.ToolTipText = treeViewJson.SelectedNode.Text;
-                treeViewJson.SelectedNode.Tag = new_key_value;
-                treeViewJson.SelectedNode.Text = ToNodePreview(new_key_value);
-                treeViewJson.SelectedNode.ToolTipText = new_key_value;
+                editingNode.ToolTipText = editingNode.Text;
+                editingNode.Tag = new_key_value;
+                editingNode.Text = ToNodePreview(new_key_value);
+                editingNode.ToolTipText = new_key_value;
                 EnableTreeViewHorizontalScrollBar();
                 return;
             }
@@ -1117,8 +1123,6 @@ namespace AMI_Manager.Forms.Main
                 }
             }
 
-            return;
-
         }
 
         private void treeViewJson_KeyDown(object sender, KeyEventArgs e)
@@ -1130,7 +1134,7 @@ namespace AMI_Manager.Forms.Main
                 {
                     e.SuppressKeyPress = true;
                     using (var editDialog = new Form())
-                    using (var textBox = new TextBox())
+                    using (var editTextBox = new RichTextBox())
                     using (var buttonPanel = new Panel())
                     using (var buttonFlowPanel = new FlowLayoutPanel())
                     using (var okButton = new Button())
@@ -1140,12 +1144,11 @@ namespace AMI_Manager.Forms.Main
                         editDialog.StartPosition = FormStartPosition.CenterParent;
                         editDialog.Size = new Size(900, 280);
 
-                        textBox.Multiline = true;
-                        textBox.ScrollBars = ScrollBars.None;
-                        textBox.WordWrap = true;
-                        textBox.AcceptsReturn = true;
-                        textBox.Dock = DockStyle.Fill;
-                        textBox.Text = fullNodeText;
+                        editTextBox.Multiline = true;
+                        editTextBox.ScrollBars = RichTextBoxScrollBars.Vertical;
+                        editTextBox.WordWrap = true;
+                        editTextBox.Dock = DockStyle.Fill;
+                        editTextBox.Text = fullNodeText;
 
                         okButton.Text = "OK";
                         okButton.DialogResult = DialogResult.OK;
@@ -1169,15 +1172,14 @@ namespace AMI_Manager.Forms.Main
                         buttonFlowPanel.Controls.Add(okButton);
                         buttonPanel.Controls.Add(buttonFlowPanel);
 
-                        editDialog.Controls.Add(textBox);
+                        editDialog.Controls.Add(editTextBox);
                         editDialog.Controls.Add(buttonPanel);
                         editDialog.AcceptButton = okButton;
                         editDialog.CancelButton = cancelButton;
 
                         if (editDialog.ShowDialog(this) == DialogResult.OK)
                         {
-                            var args = new NodeLabelEditEventArgs(treeViewJson.SelectedNode, textBox.Text);
-                            treeViewJson_AfterLabelEdit(this, args);
+                            ApplyNodeLabelEdit(treeViewJson.SelectedNode, editTextBox.Text);
                         }
                     }
                 }
