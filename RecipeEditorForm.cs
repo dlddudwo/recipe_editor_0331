@@ -73,6 +73,7 @@ namespace AMI_Manager.Forms.Main
         private System.Windows.Forms.TreeNode NodeSource;
         private System.Windows.Forms.TreeNode NodeTarget;
         private bool isF2EditRequested = false;
+        private bool isNodeEditDialogOpen = false;
         private const int NodePreviewMaxLength = 120;
 
         private const int GWL_STYLE = -16;
@@ -705,7 +706,7 @@ namespace AMI_Manager.Forms.Main
                         TreeNode node = treeViewJson.SelectedNode;
 
                         string node_path = GetNodePath(node, Get_node_mode.Delete);
-                        node_path = Regex.Replace(node_path, @"\([^)]*\)", "");
+                        node_path = Regex.Replace(node_path, @"\s\(\d+\)", "");
                         node_path = node_path.Split(':')[0];
                         node_path = node_path.Substring(5);
 
@@ -877,7 +878,7 @@ namespace AMI_Manager.Forms.Main
         {
             string node_path = string.Empty;
             node_path = GetNodePath(select_node, Get_node_mode.Delete);
-            node_path = Regex.Replace(node_path, @"\([^)]*\)", "");
+            node_path = Regex.Replace(node_path, @"\s\(\d+\)", "");
             if (Mode == Path_skip_mode.Skip)
             {
                 if (node_path == "Root")
@@ -1147,64 +1148,79 @@ namespace AMI_Manager.Forms.Main
 
         private void treeViewJson_KeyDown(object sender, KeyEventArgs e)
         {
+            if (isNodeEditDialogOpen)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                return;
+            }
+
             if (e.KeyCode == Keys.F2 && treeViewJson.SelectedNode != null)
             {
                 isF2EditRequested = true;
+                e.Handled = true;
+                e.SuppressKeyPress = true;
                 TreeNode nodeToEdit = treeViewJson.SelectedNode;
                 string fullNodeText = GetFullNodeText(nodeToEdit);
                 if (fullNodeText.Contains(":"))
                 {
-                    e.SuppressKeyPress = true;
-                    using (var editDialog = new Form())
-                    using (var editTextBox = new RichTextBox())
-                    using (var buttonPanel = new Panel())
-                    using (var buttonFlowPanel = new FlowLayoutPanel())
-                    using (var okButton = new Button())
-                    using (var cancelButton = new Button())
+                    isNodeEditDialogOpen = true;
+                    try
                     {
-                        editDialog.Text = "Node Edit";
-                        editDialog.StartPosition = FormStartPosition.CenterParent;
-                        editDialog.Size = new Size(900, 280);
-
-                        editTextBox.Multiline = true;
-                        editTextBox.ScrollBars = RichTextBoxScrollBars.Vertical;
-                        editTextBox.WordWrap = true;
-                        editTextBox.Dock = DockStyle.Fill;
-                        editTextBox.Text = fullNodeText;
-
-                        okButton.Text = "OK";
-                        okButton.DialogResult = DialogResult.OK;
-                        okButton.Size = new Size(80, 30);
-
-                        cancelButton.Text = "Cancel";
-                        cancelButton.DialogResult = DialogResult.Cancel;
-                        cancelButton.Size = new Size(80, 30);
-
-                        buttonPanel.Dock = DockStyle.Bottom;
-                        buttonPanel.Height = 42;
-                        buttonPanel.Padding = new Padding(0, 6, 10, 6);
-
-                        buttonFlowPanel.Dock = DockStyle.Right;
-                        buttonFlowPanel.FlowDirection = FlowDirection.RightToLeft;
-                        buttonFlowPanel.WrapContents = false;
-                        buttonFlowPanel.AutoSize = true;
-                        buttonFlowPanel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-
-                        buttonFlowPanel.Controls.Add(cancelButton);
-                        buttonFlowPanel.Controls.Add(okButton);
-                        buttonPanel.Controls.Add(buttonFlowPanel);
-
-                        editDialog.Controls.Add(editTextBox);
-                        editDialog.Controls.Add(buttonPanel);
-                        editDialog.AcceptButton = okButton;
-                        editDialog.CancelButton = cancelButton;
-
-                        if (editDialog.ShowDialog(this) == DialogResult.OK)
+                        using (var editDialog = new Form())
+                        using (var editTextBox = new RichTextBox())
+                        using (var buttonPanel = new Panel())
+                        using (var buttonFlowPanel = new FlowLayoutPanel())
+                        using (var okButton = new Button())
+                        using (var cancelButton = new Button())
                         {
-                            ApplyNodeLabelEdit(nodeToEdit, editTextBox.Text);
-                        }
+                            editDialog.Text = "Node Edit";
+                            editDialog.StartPosition = FormStartPosition.CenterParent;
+                            editDialog.Size = new Size(900, 280);
 
+                            editTextBox.Multiline = true;
+                            editTextBox.ScrollBars = RichTextBoxScrollBars.Vertical;
+                            editTextBox.WordWrap = true;
+                            editTextBox.Dock = DockStyle.Fill;
+                            editTextBox.Text = fullNodeText;
+
+                            okButton.Text = "OK";
+                            okButton.DialogResult = DialogResult.OK;
+                            okButton.Size = new Size(80, 30);
+
+                            cancelButton.Text = "Cancel";
+                            cancelButton.DialogResult = DialogResult.Cancel;
+                            cancelButton.Size = new Size(80, 30);
+
+                            buttonPanel.Dock = DockStyle.Bottom;
+                            buttonPanel.Height = 42;
+                            buttonPanel.Padding = new Padding(0, 6, 10, 6);
+
+                            buttonFlowPanel.Dock = DockStyle.Right;
+                            buttonFlowPanel.FlowDirection = FlowDirection.RightToLeft;
+                            buttonFlowPanel.WrapContents = false;
+                            buttonFlowPanel.AutoSize = true;
+                            buttonFlowPanel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+
+                            buttonFlowPanel.Controls.Add(cancelButton);
+                            buttonFlowPanel.Controls.Add(okButton);
+                            buttonPanel.Controls.Add(buttonFlowPanel);
+
+                            editDialog.Controls.Add(editTextBox);
+                            editDialog.Controls.Add(buttonPanel);
+                            editDialog.AcceptButton = okButton;
+                            editDialog.CancelButton = cancelButton;
+
+                            if (editDialog.ShowDialog(this) == DialogResult.OK)
+                            {
+                                ApplyNodeLabelEdit(nodeToEdit, editTextBox.Text);
+                            }
+                        }
+                    }
+                    finally
+                    {
                         isF2EditRequested = false;
+                        isNodeEditDialogOpen = false;
                     }
                 }
                 else
