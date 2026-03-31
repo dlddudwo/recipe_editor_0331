@@ -1012,7 +1012,7 @@ namespace AMI_Manager.Forms.Main
 
                 if (result_path.Contains(":") && !new_key_value.Contains(":"))
                 {
-                    int existingColonIndex = key_value.LastIndexOf(':');
+                    int existingColonIndex = key_value.IndexOf(':');
                     if (existingColonIndex != -1)
                     {
                         string existingKey = key_value.Substring(0, existingColonIndex);
@@ -1043,7 +1043,7 @@ namespace AMI_Manager.Forms.Main
                 {
                     if (key_value.Contains(":"))
                     {
-                        int colon_Index = new_key_value.LastIndexOf(':');
+                        int colon_Index = new_key_value.IndexOf(':');
 
                         if (colon_Index != -1)
                         {
