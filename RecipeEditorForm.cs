@@ -72,6 +72,7 @@ namespace AMI_Manager.Forms.Main
 
         private System.Windows.Forms.TreeNode NodeSource;
         private System.Windows.Forms.TreeNode NodeTarget;
+        private bool isF2EditRequested = false;
         private const int NodePreviewMaxLength = 120;
 
         private const int GWL_STYLE = -16;
@@ -123,7 +124,6 @@ namespace AMI_Manager.Forms.Main
 
             treeViewJson.AfterLabelEdit += new NodeLabelEditEventHandler(treeViewJson_AfterLabelEdit);
             treeViewJson.BeforeLabelEdit += treeViewJson_BeforeLabelEdit;
-            treeViewJson.KeyDown += treeViewJson_KeyDown;
             treeViewJson.GetType().GetProperty("DoubleBuffered", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(treeViewJson, true);
             treeViewJson.Scrollable = true;
             treeViewJson.ShowNodeToolTips = true;
@@ -503,6 +503,12 @@ namespace AMI_Manager.Forms.Main
 
         private void treeViewJson_BeforeLabelEdit(object sender, NodeLabelEditEventArgs e)
         {
+            if (!isF2EditRequested)
+            {
+                e.CancelEdit = true;
+                return;
+            }
+
             BeginInvoke(new Action(() =>
             {
                 if (e.Node == null)
@@ -973,7 +979,14 @@ namespace AMI_Manager.Forms.Main
         //===== Treeview 내용 수정 후 실제 Json파일 반영 =======//
         private void treeViewJson_AfterLabelEdit(object sender, NodeLabelEditEventArgs e)
         {
-            ApplyNodeLabelEdit(e?.Node ?? treeViewJson.SelectedNode, e?.Label);
+            try
+            {
+                ApplyNodeLabelEdit(e?.Node ?? treeViewJson.SelectedNode, e?.Label);
+            }
+            finally
+            {
+                isF2EditRequested = false;
+            }
         }
 
         private void ApplyNodeLabelEdit(TreeNode editingNode, string new_key_value)
@@ -1136,6 +1149,7 @@ namespace AMI_Manager.Forms.Main
         {
             if (e.KeyCode == Keys.F2 && treeViewJson.SelectedNode != null)
             {
+                isF2EditRequested = true;
                 TreeNode nodeToEdit = treeViewJson.SelectedNode;
                 string fullNodeText = GetFullNodeText(nodeToEdit);
                 if (fullNodeText.Contains(":"))
@@ -1189,6 +1203,8 @@ namespace AMI_Manager.Forms.Main
                         {
                             ApplyNodeLabelEdit(nodeToEdit, editTextBox.Text);
                         }
+
+                        isF2EditRequested = false;
                     }
                 }
                 else
