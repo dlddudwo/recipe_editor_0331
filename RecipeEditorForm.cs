@@ -997,15 +997,6 @@ namespace AMI_Manager.Forms.Main
                     return;
                 }
 
-                if (result_path.Contains(":"))
-                {
-                    if (!new_key_value.Contains(":"))
-                    {
-                        MessageBox.Show(this, "key와 value사이에 :를 입력하여 작성해주세요!", "WARNING");
-                        return;
-                    }
-                }
-
                 if (result_path.Contains("/"))
                 {
                     int Last_Slash_index = result_path.LastIndexOf('/');
@@ -1018,6 +1009,16 @@ namespace AMI_Manager.Forms.Main
                 }
                 else
                     key_value = result_path;
+
+                if (result_path.Contains(":") && !new_key_value.Contains(":"))
+                {
+                    int existingColonIndex = key_value.LastIndexOf(':');
+                    if (existingColonIndex != -1)
+                    {
+                        string existingKey = key_value.Substring(0, existingColonIndex);
+                        new_key_value = $"{existingKey}:{new_key_value}";
+                    }
+                }
 
 
 
