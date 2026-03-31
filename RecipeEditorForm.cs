@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -982,131 +983,99 @@ namespace AMI_Manager.Forms.Main
                 if (editingNode == null)
                     return;
 
-                if (new_key_value != null)
-                {
-                    new_key_value = new_key_value.Replace("\r", string.Empty).Replace("\n", string.Empty);
-                }
-
-                string select_node_path = string.Empty;
-
-                string result_path = Select_json_path(editingNode, Path_skip_mode.Skip);
-                string key_value = string.Empty;
-
                 if (new_key_value == null)
                 {
                     return;
                 }
 
-                if (result_path.Contains(":"))
+                new_key_value = new_key_value.Replace("\r", string.Empty).Replace("\n", string.Empty);
+
+                string result_path = Select_json_path(editingNode, Path_skip_mode.Skip);
+                if (string.IsNullOrWhiteSpace(result_path))
+                    return;
+
+                string key_value = result_path;
+                int slashIndex = result_path.LastIndexOf('/');
+                if (slashIndex != -1)
                 {
-                    if (!new_key_value.Contains(":"))
-                    {
-                        MessageBox.Show(this, "key와 value사이에 :를 입력하여 작성해주세요!", "WARNING");
-                        return;
-                    }
+                    key_value = result_path.Substring(slashIndex + 1);
                 }
 
-                if (result_path.Contains("/"))
+                string selectTokenPath = result_path;
+                int tokenColonIndex = selectTokenPath.IndexOf(':');
+                if (tokenColonIndex != -1)
                 {
-                    int Last_Slash_index = result_path.LastIndexOf('/');
-                    string temp_key = result_path.Substring(0, Last_Slash_index);
-
-                    if (Last_Slash_index != -1)
-                    {
-                        key_value = result_path.Substring(Last_Slash_index + 1);
-                    }
+                    selectTokenPath = selectTokenPath.Substring(0, tokenColonIndex);
                 }
-                else
-                    key_value = result_path;
-
-
-
-                if (result_path.Contains(":"))
+                selectTokenPath = selectTokenPath.Replace("/", ".");  //소수점 입력시 select_token 경로명에 algorithm.insp_info. 과 같이 input으로 들어가 이와 혼동 될 수 있어 경로명을 / 식으로 구성했다가 .으로 바꿈 
+                JToken select_token = jsonObject.SelectToken(selectTokenPath);
+                if (select_token == null)
                 {
-                    int index = result_path.IndexOf(':');
-                    if (index != -1)
-                    {
-                        result_path = result_path.Substring(0, index);
-                    }
+                    MessageBox.Show(this, "수정 대상 경로를 찾지 못했습니다.", "WARNING");
+                    return;
                 }
-
-                string new_key = string.Empty;
-                string new_value = string.Empty;
-
-
-                result_path = result_path.Replace("/", ".");  //소수점 입력시 select_token 경로명에 algorithm.insp_info. 과 같이 input으로 들어가 이와 혼동 될 수 있어 경로명을 / 식으로 구성했다가 .으로 바꿈 
-                JToken select_token = jsonObject.SelectToken(result_path);
-
 
                 if (key_value != new_key_value)
                 {
-                    if (key_value.Contains(":"))
-                    {
-                        int colon_Index = new_key_value.LastIndexOf(':');
+                    bool hasCurrentKeyValue = TrySplitNodeEntry(key_value, out string oldKey, out _);
+                    bool hasEditedKeyValue = TrySplitNodeEntry(new_key_value, out string newKey, out string newValue);
 
-                        if (colon_Index != -1)
+                    if (hasCurrentKeyValue)
+                    {
+                        if (!hasEditedKeyValue)
                         {
-                            new_key = new_key_value.Substring(0, colon_Index);
-                            new_value = new_key_value.Substring(colon_Index + 1);
+                            if (!IsArrayIndexNode(oldKey))
+                            {
+                                MessageBox.Show(this, "key와 value사이에 :를 입력하여 작성해주세요!", "WARNING");
+                                return;
+                            }
+
+                            newKey = oldKey;
+                            newValue = new_key_value;
+                            new_key_value = $"{newKey}:{newValue}";
                         }
 
-                        bool isNumeric = double.TryParse(new_value, out double result);
+                        int imageIndex;
+                        JToken parsedValue = ParseNodeValue(newValue, out imageIndex);
 
-                        if (isNumeric)
+                        if (IsArrayIndexNode(oldKey))
                         {
-                            //select_token.Replace(Convert.ToInt32(new_value));
-                            editingNode.ImageIndex = 3;
-                            editingNode.SelectedImageIndex = 3;
-
-                            if (select_token.Parent != null)
+                            JArray parentArray = select_token.Parent as JArray;
+                            if (parentArray == null || !TryParseArrayIndex(oldKey, out int arrayIndex) || arrayIndex < 0 || arrayIndex >= parentArray.Count)
                             {
-                                JProperty property = (JProperty)select_token.Parent;
-
-                                if (new_value.Contains("."))
-                                    property.Replace(new JProperty(new_key, Convert.ToDouble(new_value)));
-                                else
-                                    property.Replace(new JProperty(new_key, Convert.ToInt32(new_value)));
+                                MessageBox.Show(this, "배열 항목을 수정할 수 없습니다.", "WARNING");
+                                return;
                             }
+
+                            parentArray[arrayIndex] = parsedValue;
+                            editingNode.ImageIndex = imageIndex;
+                            editingNode.SelectedImageIndex = imageIndex;
                         }
                         else
                         {
-                            if (bool.TryParse(new_value, out bool booleanParam))
+                            JProperty property = select_token.Parent as JProperty;
+                            if (property == null)
                             {
-                                if (select_token.Parent != null)
-                                {
-                                    JProperty property = (JProperty)select_token.Parent;
-                                    property.Replace(new JProperty(new_key, booleanParam));
-                                }
-                                editingNode.ImageIndex = 4;
-                                editingNode.SelectedImageIndex = 4;
+                                MessageBox.Show(this, "수정 대상 속성을 찾지 못했습니다.", "WARNING");
+                                return;
                             }
-                            else
-                            {
-                                //select_token.Replace(new_value);
+                            property.Replace(new JProperty(newKey, parsedValue));
 
-                                if (select_token.Parent != null)
-                                {
-                                    JProperty property = (JProperty)select_token.Parent;
-                                    property.Replace(new JProperty(new_key, new_value));
-                                }
-                                editingNode.ImageIndex = 5;
-                                editingNode.SelectedImageIndex = 5;
-                            }
-
+                            editingNode.ImageIndex = imageIndex;
+                            editingNode.SelectedImageIndex = imageIndex;
+                            new_key_value = $"{newKey}:{newValue}";
                         }
                     }
                     else
                     {
-                        if (select_token == null)
-                            return;
-
-                        if (select_token.Parent != null)
+                        JProperty property = select_token.Parent as JProperty;
+                        if (property == null)
                         {
-                            JProperty property = (JProperty)select_token.Parent;
-                            property.Replace(new JProperty(new_key_value, property.Value));
+                            MessageBox.Show(this, "수정 대상 속성을 찾지 못했습니다.", "WARNING");
+                            return;
                         }
+                        property.Replace(new JProperty(new_key_value, property.Value));
                     }
-
                 }
                 editingNode.ToolTipText = editingNode.Text;
                 editingNode.Tag = new_key_value;
@@ -1115,7 +1084,7 @@ namespace AMI_Manager.Forms.Main
                 EnableTreeViewHorizontalScrollBar();
                 return;
             }
-            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException || ex is NullReferenceException || ex is Newtonsoft.Json.JsonException)
+            catch (Exception ex) when (ex is ArgumentException || ex is InvalidOperationException || ex is NullReferenceException || ex is InvalidCastException || ex is OverflowException || ex is FormatException || ex is Newtonsoft.Json.JsonException)
             {
 
                 if (ex.Message.Contains("already exist"))
@@ -1128,6 +1097,66 @@ namespace AMI_Manager.Forms.Main
                 }
             }
 
+        }
+
+        private static bool TrySplitNodeEntry(string source, out string key, out string value)
+        {
+            key = source;
+            value = string.Empty;
+            if (string.IsNullOrEmpty(source))
+                return false;
+
+            int colonIndex = source.LastIndexOf(':');
+            if (colonIndex < 0)
+                return false;
+
+            key = source.Substring(0, colonIndex);
+            value = source.Substring(colonIndex + 1);
+            return true;
+        }
+
+        private static bool IsArrayIndexNode(string key)
+        {
+            return Regex.IsMatch(key ?? string.Empty, @"^\[\d+\]$");
+        }
+
+        private static bool TryParseArrayIndex(string key, out int index)
+        {
+            index = -1;
+            if (string.IsNullOrWhiteSpace(key))
+                return false;
+
+            Match match = Regex.Match(key, @"^\[(\d+)\]$");
+            if (!match.Success)
+                return false;
+
+            return int.TryParse(match.Groups[1].Value, out index);
+        }
+
+        private static JToken ParseNodeValue(string rawValue, out int imageIndex)
+        {
+            if (bool.TryParse(rawValue, out bool boolValue))
+            {
+                imageIndex = 4;
+                return new JValue(boolValue);
+            }
+
+            if (long.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out long integerValue) ||
+                long.TryParse(rawValue, NumberStyles.Integer, CultureInfo.CurrentCulture, out integerValue))
+            {
+                imageIndex = 3;
+                return new JValue(integerValue);
+            }
+
+            if (double.TryParse(rawValue, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out double doubleValue) ||
+                double.TryParse(rawValue, NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.CurrentCulture, out doubleValue))
+            {
+                imageIndex = 3;
+                return new JValue(doubleValue);
+            }
+
+            imageIndex = 5;
+            return new JValue(rawValue);
         }
 
         private void treeViewJson_KeyDown(object sender, KeyEventArgs e)
