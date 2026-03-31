@@ -123,6 +123,7 @@ namespace AMI_Manager.Forms.Main
 
             treeViewJson.AfterLabelEdit += new NodeLabelEditEventHandler(treeViewJson_AfterLabelEdit);
             treeViewJson.BeforeLabelEdit += treeViewJson_BeforeLabelEdit;
+            treeViewJson.KeyDown += treeViewJson_KeyDown;
             treeViewJson.GetType().GetProperty("DoubleBuffered", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(treeViewJson, true);
             treeViewJson.Scrollable = true;
             treeViewJson.ShowNodeToolTips = true;
